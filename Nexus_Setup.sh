@@ -49,3 +49,4 @@ EOF'
 # Enable and start Nexus service
 sudo systemctl enable nexus
 sudo systemctl start nexus
+
