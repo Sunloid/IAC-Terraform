@@ -8,30 +8,40 @@ terraform {
   required_version = ">= 1.2.0"
 }
 
-provider "aws" {
-  region = "ap-south-1"
+
+resource "aws_key_pair" "name" {
+  key_name = "SunloidTest"
+  public_key = file("id_rsa.pub")
 }
 
 resource "aws_instance" "intro" {
-  ami = var.ami
-  instance_type = var.instance_type
-  availability_zone = var.vpc_security_group_ids
-  key_name = "Sunloid-test"
-  vpc_security_group_ids = var.vpc_security_group_ids
+  for_each = var.Instance
+  ami = each.value.ami
+  instance_type = each.value.instance_type
+  availability_zone = each.value.availability_zone
+  key_name = "SunloidTest"
+  vpc_security_group_ids = ["sg-0e021e9d85bb8b30c"]
+  associate_public_ip_address = true  
   tags = {
-    Name = "Jenkins_Instance"
+    Name = each.value.Name
+  }
+
+  connection {
+    host = self.public_ip
+    type = "ssh"
+    user = "ubuntu"
+    private_key = file("id_rsa")
   }
 
   provisioner "file" {
-    source = "Jenkins_Setup.sh"
-    destination = "/tmp/Jenkins_Setup.sh"
+    source = each.value.provisioner_file_source
+    destination = each.value.provisioner_file_destination
   }
 
   provisioner "remote-exec" {
     inline = [ 
-        "chmod 777 /tmp/Jenkins_Setup.sh",
-        "cd /tmp", 
-        "sudo Jenkins_Setup.sh"
+        "chmod +x /tmp/${each.value.provisioner_inline}", 
+        "sudo /tmp/${each.value.provisioner_inline}"
      ]
   }
 }
